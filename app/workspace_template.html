@@ -180,10 +180,15 @@ textarea.code-editor{width:100%;background:transparent;border:none;outline:none;
           <div class="editor-header">
             <span>editor</span>
             <select class="lang-select" id="langSelect">
-              <option>python</option><option>javascript</option><option>java</option>
+              <option value="python">Python</option>
+              <option value="javascript">JavaScript</option>
+              <option value="java">Java</option>
+              <option value="c">C</option>
+              <option value="cpp">C++</option>
+              <option value="typescript">TypeScript</option>
             </select>
           </div>
-          <textarea class="code-editor" id="codeEditor"># {{TOPIC}} — starter
+          <textarea class="code-editor" id="codeEditor"># {{TOPIC}} -- starter
 def solution(input_data):
     # Write your solution here
     pass
@@ -198,6 +203,23 @@ print(solution("test input"))</textarea>
       </div>
     </div>
   </div>
+
+  <script>
+  // Update starter code when language changes
+  var STARTERS = {
+    python:     '# ' + '{{TOPIC}}' + ' -- starter\ndef solution(input_data):\n    # Write your solution here\n    pass\n\nprint(solution("test input"))',
+    javascript: '// {{TOPIC}} -- starter\nfunction solution(inputData) {\n  // Write your solution here\n}\n\nconsole.log(solution("test input"));',
+    java:       'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}',
+    c:          '#include <stdio.h>\n\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}',
+    cpp:        '#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, World!" << endl;\n    return 0;\n}',
+    typescript: '// {{TOPIC}} -- starter\nfunction solution(inputData: string): string {\n  return inputData;\n}\n\nconsole.log(solution("test input"));',
+  };
+  document.getElementById('langSelect').addEventListener('change', function() {
+    var starter = STARTERS[this.value] || STARTERS.python;
+    document.getElementById('codeEditor').value = starter;
+    document.getElementById('outputBox').textContent = 'Click "Run Code" to execute...';
+  });
+  </script>
 
   <!-- MCQs -->
   <div class="panel" id="panel-mcqs">
@@ -440,12 +462,91 @@ function nextSet() { setCorrect = 0; setWrong = 0; document.getElementById('scor
 function restartMCQ() { mcqCursor = 0; setCorrect = 0; setWrong = 0; totalCorrect = 0; totalWrong = 0; document.getElementById('scoreOverlay').classList.remove('show'); renderQuestion(); }
 function closeOverlay() { document.getElementById('scoreOverlay').classList.remove('show'); }
 
-// ── Code runner ────────────────────────────────────────────────────────────
-function runCode() {
-  var lang = document.getElementById('langSelect').value;
-  document.getElementById('outputBox').textContent =
-    '▶ Running ' + lang + ' code...\n\n(Demo — connect Judge0 API key for live execution)\n\n' +
-    'Simulated output:\nSolution executed successfully\nTest case 1: ✓ Passed\nTest case 2: ✓ Passed\nTime: 42ms | Memory: 18KB';
+// ── Code runner (Judge0 CE — free, no API key needed) ─────────────────────
+var JUDGE0_URL = 'https://ce.judge0.com';
+
+// Language ID map for Judge0 CE
+var LANG_IDS = {
+  'python':     71,   // Python 3.8
+  'javascript': 63,   // Node.js 12
+  'java':       62,   // Java 13
+  'c':          50,   // C (GCC 9.2)
+  'cpp':        54,   // C++ (GCC 9.2)
+  'typescript': 74,   // TypeScript 3.7
+};
+
+async function runCode() {
+  var lang    = document.getElementById('langSelect').value;
+  var code    = document.getElementById('codeEditor').value;
+  var outBox  = document.getElementById('outputBox');
+  var btn     = document.querySelector('.run-btn');
+
+  var langId = LANG_IDS[lang] || 71;
+
+  outBox.textContent = 'Running...';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Running...'; }
+
+  try {
+    // Submit code
+    var submitRes = await fetch(JUDGE0_URL + '/submissions?base64_encoded=false&wait=false', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source_code: code,
+        language_id: langId,
+        stdin: '',
+      }),
+    });
+
+    if (!submitRes.ok) {
+      outBox.textContent = 'Error: Could not reach code runner (status ' + submitRes.status + ').\nCheck your internet connection.';
+      return;
+    }
+
+    var submitData = await submitRes.json();
+    var token = submitData.token;
+    if (!token) {
+      outBox.textContent = 'Error: No token received from code runner.';
+      return;
+    }
+
+    // Poll for result (max 15 attempts, 1s apart)
+    var result = null;
+    for (var i = 0; i < 15; i++) {
+      await new Promise(function(r) { setTimeout(r, 1000); });
+      var pollRes = await fetch(JUDGE0_URL + '/submissions/' + token + '?base64_encoded=false');
+      var pollData = await pollRes.json();
+      // status.id: 1=In Queue, 2=Processing, 3=Accepted, 4=Wrong Answer, 5=TLE, 6=CE, etc.
+      if (pollData.status && pollData.status.id > 2) {
+        result = pollData;
+        break;
+      }
+    }
+
+    if (!result) {
+      outBox.textContent = 'Timed out waiting for result. Try again.';
+      return;
+    }
+
+    // Show output
+    var out = '';
+    if (result.stdout)          out += result.stdout;
+    if (result.stderr)          out += (out ? '\n' : '') + 'Error:\n' + result.stderr;
+    if (result.compile_output)  out += (out ? '\n' : '') + 'Compile error:\n' + result.compile_output;
+    if (!out) {
+      if (result.status && result.status.id === 3) {
+        out = '(no output)';
+      } else {
+        out = result.status ? result.status.description : 'Unknown error';
+      }
+    }
+    outBox.textContent = out.trimEnd();
+
+  } catch (err) {
+    outBox.textContent = 'Error: ' + err.message + '\n\nThe public code runner may be temporarily unavailable. Try again in a moment.';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '▶ Run Code'; }
+  }
 }
 
 // ── Interview ──────────────────────────────────────────────────────────────
