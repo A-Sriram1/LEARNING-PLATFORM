@@ -6,6 +6,7 @@
 <title>SkillForge AI — Learn Any Topic. Master Every Skill.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   :root{
     --ink:#0B0D10;
@@ -222,7 +223,7 @@
     </div>
     <div class="nav-cta">
       <a class="btn btn-ghost" href="/login">Log in</a>
-      <a class="btn btn-primary" href="/login">Start learning</a>
+      <a class="btn btn-primary" href="/login?next=%2F">Start learning</a>
     </div>
   </div>
 </nav>
@@ -282,7 +283,7 @@
         <div>
           <h3>Java Arrays, explained your way</h3>
           <p>Clear theory, common mistakes, and worked examples — generated for exactly what you typed, then organized into tabs you can jump between without losing your place.</p>
-          <a class="btn btn-primary" href="#">Open a sample workspace</a>
+        <a class="btn btn-primary" href="/workspace?topic=Java+Arrays">Open a sample workspace</a>
         </div>
         <div class="code-mock">
 <span class="com">// declare and initialize</span><br>
@@ -354,7 +355,7 @@
           <li>50 MCQs / day</li>
           <li>No voice interviews</li>
         </ul>
-        <a class="btn btn-ghost" href="#">Get started</a>
+        <a class="btn btn-ghost" href="/login">Get started</a>
       </div>
       <div class="price-card featured">
         <div class="price-name">Pro</div>
@@ -366,7 +367,7 @@
           <li>10 voice interviews / mo</li>
           <li>Full analytics</li>
         </ul>
-        <a class="btn btn-primary" href="#">Start Pro trial</a>
+        <a class="btn btn-primary" href="/login">Start Pro trial</a>
       </div>
       <div class="price-card">
         <div class="price-name">Teams</div>
@@ -377,7 +378,7 @@
           <li>Cohort progress reports</li>
           <li>Priority support</li>
         </ul>
-        <a class="btn btn-ghost" href="#">Talk to us</a>
+        <a class="btn btn-ghost" href="/login">Talk to us</a>
       </div>
     </div>
   </div>
@@ -416,8 +417,8 @@
       <h2>Your next skill is one topic away.</h2>
       <p>Free to start. No credit card required.</p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="#">Start learning</a>
-        <a class="btn btn-ghost" href="#">Explore topics</a>
+        <a class="btn btn-primary" href="/login?next=%2F">Start learning</a>
+        <a class="btn btn-ghost" href="/login?next=%2F">Explore topics</a>
       </div>
     </div>
   </div>
@@ -487,13 +488,26 @@
   });
 
   // Wire the button to navigate to /workspace?topic=...
+  // Requires a Supabase session; redirects through /login?next=... if not signed in.
+  const _landingSB = (typeof supabase !== 'undefined' && window.SUPABASE_URL && window.SUPABASE_ANON)
+    ? supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON)
+    : null;
+
   async function forgeWorkspace() {
     const topic = input.value.trim();
     if (!topic) return;
     goBtn.disabled = true;
     goBtn.textContent = 'Forging…';
     assemble();
-    window.location.href = '/workspace?topic=' + encodeURIComponent(topic);
+    const dest = '/workspace?topic=' + encodeURIComponent(topic);
+    if (_landingSB) {
+      const { data } = await _landingSB.auth.getSession();
+      if (!data || !data.session) {
+        window.location.href = '/login?next=' + encodeURIComponent(dest);
+        return;
+      }
+    }
+    window.location.href = dest;
   }
 
   goBtn.addEventListener('click', forgeWorkspace);
