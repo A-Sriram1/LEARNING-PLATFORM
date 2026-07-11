@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python — SkillForge AI Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ink);color:var(--text);font-family:'Inter',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif;letter-spacing:-.02em}
+:root{--ink:#0B0D10;--surface:#14171C;--surface-2:#1B1F26;--line:#262B33;
+  --ember:#FF8A3D;--ember-dim:#7A4420;--steel:#7C8CA6;--text:#F1F2F4;--muted:#9298A6;--green:#4CAF50;--red:#ef5350}
+.topbar{background:rgba(11,13,16,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;position:sticky;top:0;z-index:50}
+.brand{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px}
+.back-btn{font-size:13px;color:var(--muted);text-decoration:none;border:1px solid var(--line);
+  padding:6px 14px;border-radius:6px;transition:color .15s,border-color .15s}
+.back-btn:hover{color:var(--text);border-color:var(--steel)}
+.tabs{display:flex;gap:4px;padding:10px 24px;background:var(--surface-2);border-bottom:1px solid var(--line);overflow-x:auto;flex-shrink:0}
+.tab{font-size:13px;padding:7px 16px;border-radius:6px;cursor:pointer;color:var(--muted);border:1px solid transparent;white-space:nowrap;transition:all .15s}
+.tab:hover{color:var(--text)}.tab.active{background:var(--ink);color:var(--ember);border-color:var(--ember-dim)}
+.content{flex:1;padding:32px 24px;max-width:960px;margin:0 auto;width:100%}
+.panel{display:none}.panel.active{display:block}
+.badge{display:inline-block;font-size:11px;padding:3px 8px;border-radius:4px;
+  background:rgba(255,138,61,.12);color:var(--ember);border:1px solid var(--ember-dim);margin-bottom:16px}
+/* roadmap */
+.road-step{display:flex;gap:16px;padding:20px 0;border-bottom:1px solid var(--line)}
+.road-step:last-child{border-bottom:none}
+.step-num{width:32px;height:32px;border-radius:50%;background:var(--ember);color:#1A0E05;
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.road-step strong{font-size:16px;display:block;margin-bottom:4px}
+.road-step p{font-size:14px;color:var(--muted)}
+/* theory */
+.theory-section{margin-bottom:28px}
+.theory-section h3{font-size:18px;margin-bottom:10px;color:var(--ember)}
+.theory-section p{font-size:15px;color:var(--muted);line-height:1.7}
+.mistake-list{list-style:none;margin-top:16px}
+.mistake-list li{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--muted)}
+.mistake-list li::before{content:"⚠ ";color:var(--ember)}
+/* coding */
+.code-area{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.code-area{grid-template-columns:1fr}}
+.editor-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.editor-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
+  border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+.lang-select{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;
+  color:var(--text);padding:4px 8px;font-size:12px;cursor:pointer}
+textarea.code-editor{width:100%;background:transparent;border:none;outline:none;color:#9AD1B0;
+  font-family:'JetBrains Mono',monospace;font-size:13px;padding:16px;resize:none;min-height:260px;line-height:1.7}
+.output-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;
+  font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--steel);min-height:310px;white-space:pre-wrap}
+.run-btn{background:var(--ember);color:#1A0E05;border:none;border-radius:6px;
+  padding:8px 18px;font-weight:600;font-size:13px;cursor:pointer;margin-top:10px}
+.run-btn:hover{background:#ffa15e}
+/* ── MCQ ── */
+.mcq-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.mcq-meta{font-size:13px;color:var(--muted)}
+.mcq-meta strong{color:var(--text)}
+.progress-wrap{width:100%;background:var(--surface-2);border-radius:6px;height:8px;margin-bottom:20px}
+.progress-bar{height:8px;border-radius:6px;background:var(--ember);transition:width .4s ease}
+.mcq-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;
+  max-width:720px;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.q-number{font-size:12px;color:var(--ember);font-weight:600;margin-bottom:8px}
+.q-text{font-size:16px;font-weight:500;margin-bottom:20px;line-height:1.5}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;align-items:center;gap:12px;font-size:14px;padding:12px 16px;border-radius:8px;
+  border:1px solid var(--line);cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
+.opt:hover:not(.locked){border-color:var(--ember-dim);background:rgba(255,138,61,.06)}
+.opt.correct{border-color:var(--green);background:rgba(76,175,80,.1);color:var(--green)}
+.opt.wrong{border-color:var(--red);background:rgba(239,83,80,.1);color:var(--red)}
+.opt.locked{pointer-events:none}
+.opt-letter{width:26px;height:26px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.opt.correct .opt-letter{background:var(--green);border-color:var(--green);color:#fff}
+.opt.wrong .opt-letter{background:var(--red);border-color:var(--red);color:#fff}
+.mcq-feedback{margin-top:14px;font-size:13px;color:var(--muted);padding:12px 14px;
+  background:var(--surface-2);border-radius:8px;display:none}
+.mcq-feedback.show{display:block}
+.mcq-nav{display:flex;align-items:center;justify-content:space-between;margin-top:20px;flex-wrap:wrap;gap:10px}
+.mcq-stat{font-size:13px;color:var(--muted)}
+.mcq-stat .correct-c{color:var(--green);font-weight:600}
+.mcq-stat .wrong-c{color:var(--red);font-weight:600}
+/* score overlay */
+.score-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;
+  align-items:center;justify-content:center}
+.score-overlay.show{display:flex}
+.score-modal{background:var(--surface);border:1px solid var(--ember-dim);border-radius:16px;
+  padding:40px;max-width:480px;width:90%;text-align:center;animation:fadeUp .4s ease}
+.score-modal h2{font-size:28px;margin-bottom:8px}
+.score-circle{width:120px;height:120px;border-radius:50%;border:4px solid var(--ember);
+  display:flex;align-items:center;justify-content:center;margin:24px auto;
+  font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700}
+.score-breakdown{display:flex;justify-content:center;gap:32px;margin:20px 0;font-size:14px}
+.score-breakdown .sb-correct{color:var(--green)}
+.score-breakdown .sb-wrong{color:var(--red)}
+.score-modal p{color:var(--muted);font-size:14px;margin-bottom:24px}
+.score-modal-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+/* interview */
+.interview-wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:start}
+@media(max-width:800px){.interview-wrap{grid-template-columns:1fr}}
+.interview-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px}
+.chat-log{min-height:200px;max-height:340px;overflow-y:auto;margin-bottom:16px;
+  display:flex;flex-direction:column;gap:12px}
+.msg{padding:12px 16px;border-radius:8px;font-size:14px;line-height:1.6;max-width:90%}
+.msg.ai{background:var(--surface-2);border:1px solid var(--line);align-self:flex-start}
+.msg.user{background:rgba(255,138,61,.1);border:1px solid var(--ember-dim);align-self:flex-end}
+.answer-input{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;
+  color:var(--text);font-family:'Inter',sans-serif;font-size:14px;padding:12px 14px;
+  outline:none;resize:none;min-height:72px}
+.answer-input:focus{border-color:var(--ember-dim)}
+.interview-btns{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--text);
+  border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer}
+.btn-ghost:hover{border-color:var(--steel)}
+.mic-btn{display:flex;align-items:center;gap:6px;background:var(--surface-2);
+  border:1px solid var(--line);color:var(--text);border-radius:6px;
+  padding:8px 16px;font-size:13px;cursor:pointer;transition:all .2s}
+.mic-btn.recording{background:rgba(239,83,80,.15);border-color:var(--red);color:var(--red);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,83,80,.4)}50%{box-shadow:0 0 0 6px rgba(239,83,80,0)}}
+.voice-status{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
+.tts-indicator{font-size:12px;color:var(--ember);margin-top:4px;display:none}
+.tts-indicator.speaking{display:block}
+.i-score-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.i-score-card h3{font-size:16px;margin-bottom:16px;color:var(--ember)}
+.score-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.score-label{font-size:13px;color:var(--muted);width:120px;flex-shrink:0}
+.score-bar-wrap{flex:1;background:var(--surface-2);border-radius:4px;height:6px}
+.score-bar{height:6px;border-radius:4px;background:var(--ember);width:0;transition:width 1s ease}
+.score-val{font-size:13px;font-weight:600;width:32px;text-align:right}
+/* videos */
+.video-tabs{display:flex;gap:8px;margin-bottom:20px}
+.vtab{font-size:13px;padding:6px 16px;border-radius:6px;cursor:pointer;color:var(--muted);
+  border:1px solid var(--line);transition:all .15s}
+.vtab.active{background:var(--ink);color:var(--ember);border-color:var(--ember-dim)}
+.video-player-wrap{width:100%;max-width:780px;aspect-ratio:16/9;border-radius:12px;
+  overflow:hidden;background:#000;border:1px solid var(--line);margin-bottom:20px}
+.video-player-wrap iframe{width:100%;height:100%;border:none}
+.video-list{display:flex;flex-direction:column;gap:10px;max-width:780px}
+.vcard{display:flex;gap:12px;background:var(--surface);border:1px solid var(--line);
+  border-radius:10px;padding:12px 16px;cursor:pointer;transition:border-color .15s}
+.vcard:hover,.vcard.active{border-color:var(--ember-dim)}
+.vcard.active{background:rgba(255,138,61,.06)}
+.vcard-thumb{width:40px;height:40px;border-radius:8px;background:#c00;
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.vcard-title{font-size:14px;font-weight:500;margin-bottom:3px;color:var(--text)}
+.vcard-ch{font-size:12px;color:var(--muted)}
+.vload-msg{font-size:14px;color:var(--muted);padding:20px 0;text-align:center}
+/* cheat sheet */
+.cheat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.cheat-item{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px}
+.cheat-item .lbl{font-size:12px;color:var(--ember);font-weight:600;margin-bottom:6px}
+.cheat-item .detail{font-size:13px;color:var(--muted);font-family:'JetBrains Mono',monospace;line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- MCQ Score Overlay -->
+<div class="score-overlay" id="scoreOverlay">
+  <div class="score-modal">
+    <h2>🏆 Set Complete!</h2>
+    <div class="score-circle" id="scoreCircle">—</div>
+    <div class="score-breakdown">
+      <span class="sb-correct">✓ <span id="correctCount">0</span> correct</span>
+      <span class="sb-wrong">✗ <span id="wrongCount">0</span> wrong</span>
+    </div>
+    <p id="scoreMsg">Loading next set…</p>
+    <div class="score-modal-btns">
+      <button class="run-btn" onclick="nextSet()">Next 10 Questions →</button>
+      <button class="btn-ghost" onclick="restartMCQ()">↺ Restart from Q1</button>
+      <button class="btn-ghost" onclick="closeOverlay()">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="brand">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" stroke="#FF8A3D" stroke-width="1.6"/>
+      <path d="M12 8v8M8 10l4-2 4 2" stroke="#FF8A3D" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+    SkillForge AI
+  </div>
+  <a class="back-btn" href="/">← Back to home</a>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-panel="roadmap">🗺 Roadmap</div>
+  <div class="tab" data-panel="theory">Theory</div>
+  <div class="tab" data-panel="coding">{} Practice</div>
+  <div class="tab" data-panel="mcqs">? MCQs</div>
+  <div class="tab" data-panel="interview">🎙 Interview</div>
+  <div class="tab" data-panel="videos">▶ Videos</div>
+  <div class="tab" data-panel="cheatsheet">◆ Cheat Sheet</div>
+</div>
+
+<div class="content">
+
+  <!-- ROADMAP -->
+  <div class="panel active" id="panel-roadmap">
+    <div class="badge">AI-generated workspace</div>
+    <h2 style="font-size:26px;margin-bottom:6px">Python</h2>
+    <p style="color:var(--muted);margin-bottom:28px;font-size:15px">Your personalised learning roadmap</p>
+    <div class="road-step"><span class="step-num">1</span><div><strong>Introduction to Python</strong><p>Understand the fundamentals and practise with real examples.</p></div></div><div class="road-step"><span class="step-num">2</span><div><strong>Core concepts of Python</strong><p>Understand the fundamentals and practise with real examples.</p></div></div><div class="road-step"><span class="step-num">3</span><div><strong>Advanced Python patterns</strong><p>Understand the fundamentals and practise with real examples.</p></div></div><div class="road-step"><span class="step-num">4</span><div><strong>Common pitfalls in Python</strong><p>Understand the fundamentals and practise with real examples.</p></div></div><div class="road-step"><span class="step-num">5</span><div><strong>Real-world Python projects</strong><p>Understand the fundamentals and practise with real examples.</p></div></div>
+  </div>
+
+  <!-- THEORY -->
+  <div class="panel" id="panel-theory">
+    <h2 style="font-size:26px;margin-bottom:20px">Python — Theory</h2>
+    <div class="theory-section">
+      <h3>What is Python?</h3>
+      <p>Python is a foundational concept every developer should master. It covers core principles, patterns, and practices that make your code more reliable, efficient, and maintainable.</p>
+    </div>
+    <div class="theory-section">
+      <h3>Why it matters</h3>
+      <p>Understanding Python deeply helps you design better systems, write cleaner code, and ace technical interviews. These concepts appear repeatedly across real-world projects.</p>
+    </div>
+    <div class="theory-section">
+      <h3>Common mistakes</h3>
+      <ul class="mistake-list">
+        <li>Skipping the fundamentals and jumping straight to advanced usage</li>
+        <li>Ignoring edge cases in inputs and boundary conditions</li>
+        <li>Not writing tests alongside implementation</li>
+        <li>Over-engineering solutions before understanding the problem</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- CODING -->
+  <div class="panel" id="panel-coding">
+    <h2 style="font-size:22px;margin-bottom:6px">Practice: Python</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px">Write your solution, click Run to test (simulation mode)</p>
+    <div class="code-area">
+      <div>
+        <div class="editor-box">
+          <div class="editor-header">
+            <span>editor</span>
+            <select class="lang-select" id="langSelect">
+              <option>python</option><option>javascript</option><option>java</option>
+            </select>
+          </div>
+          <textarea class="code-editor" id="codeEditor"># Python — starter
+def solution(input_data):
+    # Write your solution here
+    pass
+
+print(solution("test input"))</textarea>
+        </div>
+        <button class="run-btn" onclick="runCode()">▶ Run Code</button>
+      </div>
+      <div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Output</p>
+        <div class="output-box" id="outputBox">Click "Run Code" to execute...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MCQs — 50 questions, 10 per set -->
+  <div class="panel" id="panel-mcqs">
+    <div class="mcq-header">
+      <div>
+        <h2 style="font-size:22px;margin-bottom:4px">MCQs — Python</h2>
+        <div class="mcq-meta">Set <strong id="setNum">1</strong> of 5 &nbsp;|&nbsp;
+          Question <strong id="qNum">1</strong> of 10 &nbsp;|&nbsp;
+          Total: <strong id="totalNum">1</strong>/50
+        </div>
+      </div>
+      <div class="mcq-meta">
+        <span class="correct-c" id="scoreCorrect">0</span> correct &nbsp;
+        <span class="wrong-c" id="scoreWrong">0</span> wrong
+      </div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progressBar" style="width:2%"></div>
+    </div>
+    <div id="mcqArea"></div>
+  </div>
+
+  <!-- INTERVIEW -->
+  <div class="panel" id="panel-interview">
+    <h2 style="font-size:22px;margin-bottom:16px">🎙 Mock Interview — Python</h2>
+    <div class="interview-wrap">
+      <div class="interview-box">
+        <div class="chat-log" id="chatLog">
+          <div class="msg ai">👋 Welcome! I will be interviewing you on <strong>Python</strong>.
+          You can <strong>speak</strong> or type your answers.<br><br>
+          Let's start — can you explain what Python is in your own words?</div>
+        </div>
+        <textarea class="answer-input" id="answerInput" placeholder="Type your answer, or press the mic to speak…"></textarea>
+        <div class="voice-status" id="voiceStatus">Microphone ready — click 🎤 to speak</div>
+        <div class="tts-indicator" id="ttsIndicator">🔊 Speaking…</div>
+        <div class="interview-btns">
+          <button class="run-btn" onclick="sendAnswer()">Send →</button>
+          <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤 Speak</button>
+          <button class="btn-ghost" onclick="resetInterview()">↺ Restart</button>
+          <button class="btn-ghost" onclick="showIScore()">📊 Score</button>
+        </div>
+      </div>
+      <div class="i-score-card">
+        <h3>📊 Live Score</h3>
+        <div class="score-row"><span class="score-label">Technical</span>
+          <div class="score-bar-wrap"><div class="score-bar" id="sb-tech"></div></div>
+          <span class="score-val" id="sv-tech">—</span></div>
+        <div class="score-row"><span class="score-label">Communication</span>
+          <div class="score-bar-wrap"><div class="score-bar" id="sb-comm"></div></div>
+          <span class="score-val" id="sv-comm">—</span></div>
+        <div class="score-row"><span class="score-label">Confidence</span>
+          <div class="score-bar-wrap"><div class="score-bar" id="sb-conf"></div></div>
+          <span class="score-val" id="sv-conf">—</span></div>
+        <div class="score-row"><span class="score-label">Clarity</span>
+          <div class="score-bar-wrap"><div class="score-bar" id="sb-clar"></div></div>
+          <span class="score-val" id="sv-clar">—</span></div>
+        <p id="iScoreTip" style="font-size:13px;color:var(--muted);margin-top:12px">Answer at least 2 questions to see scores.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIDEOS — embedded player -->
+  <div class="panel" id="panel-videos">
+    <h2 style="font-size:22px;margin-bottom:6px">▶ Videos — Python</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:16px">Top-viewed Tamil tutorials, playing right here</p>
+    <div class="video-tabs">
+      <div class="vtab active" id="vtab-tamil" onclick="switchVideoLang('tamil')">🇮🇳 Tamil</div>
+      <div class="vtab" id="vtab-english" onclick="switchVideoLang('english')">🌐 English</div>
+    </div>
+    <div class="video-player-wrap">
+      <iframe id="ytPlayer" src="" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+    </div>
+    <div id="videoList" class="video-list">
+      <div class="vload-msg" id="vloadMsg">Loading top Tamil videos…</div>
+    </div>
+  </div>
+
+  <!-- CHEAT SHEET -->
+  <div class="panel" id="panel-cheatsheet">
+    <h2 style="font-size:22px;margin-bottom:20px">Cheat Sheet — Python</h2>
+    <div class="cheat-grid">
+      <div class="cheat-item"><div class="lbl">Core concept</div>
+        <div class="detail">Python provides a structured way to solve problems efficiently.</div></div>
+      <div class="cheat-item"><div class="lbl">Time complexity</div>
+        <div class="detail">Best: O(1)  Average: O(n log n)  Worst: O(n²)</div></div>
+      <div class="cheat-item"><div class="lbl">Key methods</div>
+        <div class="detail">.init()  .process()  .validate()  .transform()  .output()</div></div>
+      <div class="cheat-item"><div class="lbl">Use when</div>
+        <div class="detail">Problem fits the pattern, data is structured, performance matters.</div></div>
+      <div class="cheat-item"><div class="lbl">Avoid when</div>
+        <div class="detail">A simpler solution exists or you are prematurely optimising.</div></div>
+      <div class="cheat-item"><div class="lbl">Pro tip</div>
+        <div class="detail">Always handle edge cases: empty input, single element, max bounds.</div></div>
+    </div>
+  </div>
+
+</div><!-- end .content -->
+
+<script>
+const TOPIC = "Python";
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    const panel = document.getElementById('panel-' + t.dataset.panel);
+    if (panel) panel.classList.add('active');
+    if (t.dataset.panel === 'videos' && !videosLoaded) loadVideos('tamil');
+    if (t.dataset.panel === 'mcqs' && !mcqStarted) initMCQ();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MCQ ENGINE — 50 questions, 10 per set, auto-score at end of each set
+// ═══════════════════════════════════════════════════════════════════════════
+const MCQ_BANK = [{"q": "What is the primary purpose of Python?", "opts": ["Performance only", "Readability only", "Core functionality", "None of the above"], "ans": 2},
+{"q": "Which is a best practice in Python?", "opts": ["Avoid abstractions", "Write tests first", "Skip docs", "Hardcode values"], "ans": 1},
+{"q": "When should you prefer Python?", "opts": ["Never", "Always", "When it clearly fits", "Only in production"], "ans": 2},
+{"q": "What does Python help you avoid?", "opts": ["Writing code", "Repeated bugs and anti-patterns", "Using libraries", "Refactoring"], "ans": 1},
+{"q": "Which concept is closely related to Python?", "opts": ["Random numbers", "Abstraction and encapsulation", "CSS styling", "Database indexing"], "ans": 1},
+{"q": "How does Python improve maintainability?", "opts": ["It doesn't", "By hiding all code", "By enforcing clear structure and contracts", "By removing tests"], "ans": 2},
+{"q": "A junior dev struggles with Python. What advice helps most?", "opts": ["Skip it", "Start with small examples and build up", "Read the whole spec first", "Use a different language"], "ans": 1},
+{"q": "What is a common mistake when first learning Python?", "opts": ["Testing too much", "Over-engineering before understanding the basics", "Writing comments", "Using version control"], "ans": 1},
+{"q": "Which tool most commonly pairs with Python in production?", "opts": ["Notepad", "A linter, CI pipeline, or framework", "MS Paint", "Excel"], "ans": 1},
+{"q": "What is the best way to measure mastery of Python?", "opts": ["Memorising docs", "Building a project and reviewing it", "Watching videos only", "Asking others"], "ans": 1},
+{"q": "In Python, what does 'edge case' mean?", "opts": ["A CSS property", "Input that tests boundary conditions", "A runtime error", "A design pattern"], "ans": 1},
+{"q": "Which of these is NOT a goal of Python?", "opts": ["Clarity", "Reusability", "Obfuscation", "Correctness"], "ans": 2},
+{"q": "How should you handle errors in Python?", "opts": ["Ignore them", "Catch, log, and recover gracefully", "Always crash", "Hide them"], "ans": 1},
+{"q": "What does 'refactoring' mean in the context of Python?", "opts": ["Rewriting from scratch", "Improving structure without changing behaviour", "Deleting code", "Adding features"], "ans": 1},
+{"q": "Which of these best describes a well-tested Python module?", "opts": ["No tests needed", "Has unit and integration tests covering key paths", "Only manual tests", "Tested once on release"], "ans": 1},
+{"q": "Why is documentation important in Python?", "opts": ["It is not", "It helps others (and future you) understand intent", "Only for managers", "Slows development"], "ans": 1},
+{"q": "What is 'separation of concerns' in Python?", "opts": ["Mixing all logic together", "Splitting code into focused, independent units", "A security feature", "A database term"], "ans": 1},
+{"q": "Which runtime characteristic matters most for Python at scale?", "opts": ["Font size", "Memory and CPU efficiency", "Line count", "File name"], "ans": 1},
+{"q": "What does DRY stand for in Python?", "opts": ["Do Repeat Yourself", "Don't Repeat Yourself", "Dynamic Runtime Yield", "Default Run Yesterday"], "ans": 1},
+{"q": "What is the role of abstraction in Python?", "opts": ["Makes code slower", "Hides complexity behind a clean interface", "Removes all variables", "Only used in OOP"], "ans": 1},
+{"q": "Which lifecycle stage benefits most from Python knowledge?", "opts": ["Deployment only", "Design, implementation, and review equally", "Testing only", "Monitoring only"], "ans": 1},
+{"q": "What is a 'code smell' in Python?", "opts": ["A syntax error", "A sign of deeper design problems", "A comment", "A library"], "ans": 1},
+{"q": "How does version control relate to Python?", "opts": ["It doesn't", "It tracks changes and enables collaboration", "It runs code", "It replaces testing"], "ans": 1},
+{"q": "What is mocking used for in Python tests?", "opts": ["Styling", "Replacing real dependencies with controlled fakes", "Deployment", "Logging"], "ans": 1},
+{"q": "Which naming style improves Python readability most?", "opts": ["Single letters", "Descriptive, consistent names", "Random words", "Numbers only"], "ans": 1},
+{"q": "What is 'technical debt' in a Python codebase?", "opts": ["Money owed", "Shortcuts taken now that cost more effort later", "A design pattern", "A testing tool"], "ans": 1},
+{"q": "When should you optimise Python code?", "opts": ["Always first", "After profiling proves it is a bottleneck", "Never", "Before writing tests"], "ans": 1},
+{"q": "Which principle says a function should do one thing in Python?", "opts": ["DRY", "YAGNI", "Single Responsibility Principle", "Open-Closed Principle"], "ans": 2},
+{"q": "What does 'idempotent' mean for a Python operation?", "opts": ["Fast", "Running it multiple times gives the same result", "Random output", "Only runs once"], "ans": 1},
+{"q": "How do you choose between two Python approaches?", "opts": ["Pick the longer one", "Benchmark, consider readability and maintenance cost", "Flip a coin", "Always pick the newer one"], "ans": 1},
+{"q": "What does SOLID stand for in Python design?", "opts": ["A rock-hard codebase", "Five OOP design principles", "A testing framework", "A deployment tool"], "ans": 1},
+{"q": "Why use interfaces or protocols in Python?", "opts": ["To slow things down", "To define contracts that decouple implementations", "To add syntax", "No reason"], "ans": 1},
+{"q": "What is a race condition risk in Python?", "opts": ["CPU speed", "Concurrent access causing inconsistent state", "Memory leak", "Infinite loop"], "ans": 1},
+{"q": "What does 'fail fast' mean in Python?", "opts": ["Deploy quickly", "Detect and raise errors early rather than silently", "Skip tests", "Use faster hardware"], "ans": 1},
+{"q": "Which pattern is most useful for Python event handling?", "opts": ["Singleton", "Observer / Pub-Sub", "Factory", "Proxy"], "ans": 1},
+{"q": "What is the benefit of immutability in Python?", "opts": ["Uses more RAM always", "Eliminates accidental state mutation bugs", "Slows execution", "Requires more files"], "ans": 1},
+{"q": "How does caching help Python performance?", "opts": ["It doesn't", "Stores computed results to avoid repeat work", "Deletes old data", "Adds latency"], "ans": 1},
+{"q": "What is a null pointer / NullPointerException risk in Python?", "opts": ["A CSS bug", "Dereferencing an uninitialised or absent value", "A missing import", "A syntax error"], "ans": 1},
+{"q": "What is the purpose of a linter in Python development?", "opts": ["Run tests", "Automatically flag style and potential errors", "Deploy code", "Compress files"], "ans": 1},
+{"q": "Which testing level tests a Python module in isolation?", "opts": ["End-to-end", "Unit testing", "Load testing", "Smoke testing"], "ans": 1},
+{"q": "What does 'loose coupling' mean in Python?", "opts": ["Buggy connections", "Components depend minimally on each other", "Tight integration", "No dependencies"], "ans": 1},
+{"q": "What is a design pattern in Python?", "opts": ["A colour scheme", "A reusable solution to a common design problem", "A bug fix", "A deployment step"], "ans": 1},
+{"q": "When is a recursive approach best for Python?", "opts": ["Always", "When the problem naturally divides into smaller sub-problems", "Never", "Only for sorting"], "ans": 1},
+{"q": "What does 'O(n log n)' tell you about a Python algorithm?", "opts": ["It crashes on large input", "Its runtime grows slightly faster than linear", "It is always fast", "It uses no memory"], "ans": 1},
+{"q": "How do you prevent SQL injection in a Python application?", "opts": ["Disable the database", "Use parameterised queries / prepared statements", "Escape nothing", "Store SQL in cookies"], "ans": 1},
+{"q": "What is a memory leak in Python?", "opts": ["A fast program", "Memory allocated but never released, growing over time", "A syntax error", "A missing import"], "ans": 1},
+{"q": "What does CI/CD mean for Python projects?", "opts": ["Code Issues / Code Deployment", "Continuous Integration / Continuous Deployment", "Central Index / Cache Delete", "Custom IDE / Code Debug"], "ans": 1},
+{"q": "What is the difference between synchronous and async Python code?", "opts": ["No difference", "Async code does not block while waiting for I/O", "Sync is always faster", "Async only works in browsers"], "ans": 1},
+{"q": "Which data structure is best for O(1) lookups in Python?", "opts": ["Array", "Hash map / dictionary", "Linked list", "Stack"], "ans": 1},
+{"q": "What is the final step before merging a Python pull request?", "opts": ["Delete the branch", "Code review and passing all CI checks", "Deploy to production", "Write release notes"], "ans": 1}];
+const SET_SIZE = 10;
+const TOTAL    = MCQ_BANK.length; // 50
+
+let mcqCursor  = 0;   // index into MCQ_BANK (0-49)
+let setCorrect = 0;
+let setWrong   = 0;
+let totalCorrect = 0;
+let totalWrong   = 0;
+let mcqStarted   = false;
+let answered     = false;
+
+function initMCQ() {
+  mcqStarted = true;
+  mcqCursor = totalCorrect + totalWrong; // resume position if re-entering tab
+  renderQuestion();
+}
+
+function renderQuestion() {
+  if (mcqCursor >= TOTAL) {
+    showScoreOverlay(true); // final
+    return;
+  }
+  const q   = MCQ_BANK[mcqCursor];
+  const num = mcqCursor + 1;                      // 1-50
+  const setIdx = Math.floor(mcqCursor / SET_SIZE); // 0-4
+  const posInSet = (mcqCursor % SET_SIZE) + 1;     // 1-10
+
+  document.getElementById('setNum').textContent   = setIdx + 1;
+  document.getElementById('qNum').textContent     = posInSet;
+  document.getElementById('totalNum').textContent = num;
+  document.getElementById('progressBar').style.width = Math.round((num / TOTAL) * 100) + '%';
+  document.getElementById('scoreCorrect').textContent = totalCorrect;
+  document.getElementById('scoreWrong').textContent   = totalWrong;
+
+  answered = false;
+  const letters = ['A','B','C','D'];
+  const optsHTML = q.opts.map((o, i) =>
+    `<div class="opt" data-idx="${i}" onclick="pickOpt(this,${i},${q.ans})">
+       <span class="opt-letter">${letters[i]}</span> ${o}
+     </div>`
+  ).join('');
+
+  document.getElementById('mcqArea').innerHTML = `
+    <div class="mcq-card">
+      <div class="q-number">Q${num} / ${TOTAL}</div>
+      <div class="q-text">${q.q}</div>
+      <div class="opts">${optsHTML}</div>
+      <div class="mcq-feedback" id="mcqFeedback"></div>
+      <div class="mcq-nav">
+        <span class="mcq-stat">
+          Set ${setIdx+1}/5 &nbsp; ✓ <span class="correct-c">${setCorrect}</span>
+          &nbsp; ✗ <span class="wrong-c">${setWrong}</span>
+        </span>
+        <button class="run-btn" id="nextBtn" onclick="nextQuestion()" style="display:none">
+          ${(mcqCursor + 1) % SET_SIZE === 0 ? 'See Score →' : 'Next →'}
+        </button>
+      </div>
+    </div>`;
+}
+
+function pickOpt(el, idx, correct) {
+  if (answered) return;
+  answered = true;
+
+  // lock all options
+  document.querySelectorAll('.opt').forEach(o => o.classList.add('locked'));
+
+  const fb = document.getElementById('mcqFeedback');
+  if (idx === correct) {
+    el.classList.add('correct');
+    setCorrect++; totalCorrect++;
+    fb.textContent = '✓ Correct!';
+    fb.style.color = 'var(--green)';
+  } else {
+    el.classList.add('wrong');
+    document.querySelectorAll('.opt')[correct].classList.add('correct');
+    setWrong++; totalWrong++;
+    fb.textContent = '✗ Wrong. Correct answer: ' + ['A','B','C','D'][correct] + '.';
+    fb.style.color = 'var(--red)';
+  }
+  fb.classList.add('show');
+
+  // update running totals
+  document.getElementById('scoreCorrect').textContent = totalCorrect;
+  document.getElementById('scoreWrong').textContent   = totalWrong;
+
+  const btn = document.getElementById('nextBtn');
+  if (btn) btn.style.display = 'inline-flex';
+}
+
+function nextQuestion() {
+  mcqCursor++;
+  const justFinishedSet = mcqCursor % SET_SIZE === 0;
+  if (justFinishedSet) {
+    showScoreOverlay(mcqCursor >= TOTAL);
+  } else {
+    renderQuestion();
+  }
+}
+
+function showScoreOverlay(isFinal) {
+  const pct = Math.round((setCorrect / SET_SIZE) * 100);
+  const circle = document.getElementById('scoreCircle');
+  circle.textContent = pct + '%';
+  circle.style.borderColor = pct >= 70 ? 'var(--green)' : pct >= 40 ? 'var(--ember)' : 'var(--red)';
+  document.getElementById('correctCount').textContent = setCorrect;
+  document.getElementById('wrongCount').textContent   = setWrong;
+
+  let msg = '';
+  if (isFinal) {
+    const total = totalCorrect + totalWrong;
+    const overall = Math.round((totalCorrect / total) * 100);
+    msg = `🎉 All 50 done! Overall score: ${totalCorrect}/${total} (${overall}%). `;
+    msg += overall >= 80 ? 'Excellent mastery!' : overall >= 60 ? 'Good work, keep practising.' : 'Keep going — review weak areas.';
+    document.querySelector('#scoreOverlay .run-btn').textContent = '↺ Restart all 50';
+    document.querySelector('#scoreOverlay .run-btn').onclick = restartMCQ;
+  } else {
+    const setNum = mcqCursor / SET_SIZE;
+    msg = pct >= 70 ? `Great set! Moving to set ${setNum+1}.` : `Keep it up! Set ${setNum+1} coming up.`;
+    document.querySelector('#scoreOverlay .run-btn').textContent = 'Next 10 Questions →';
+    document.querySelector('#scoreOverlay .run-btn').onclick = nextSet;
+  }
+  document.getElementById('scoreMsg').textContent = msg;
+  document.getElementById('scoreOverlay').classList.add('show');
+}
+
+function nextSet() {
+  setCorrect = 0; setWrong = 0;
+  document.getElementById('scoreOverlay').classList.remove('show');
+  renderQuestion();
+}
+
+function restartMCQ() {
+  mcqCursor = 0; setCorrect = 0; setWrong = 0;
+  totalCorrect = 0; totalWrong = 0;
+  document.getElementById('scoreOverlay').classList.remove('show');
+  renderQuestion();
+}
+
+function closeOverlay() {
+  document.getElementById('scoreOverlay').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CODE RUNNER (simulated)
+// ═══════════════════════════════════════════════════════════════════════════
+function runCode() {
+  const lang = document.getElementById('langSelect').value;
+  document.getElementById('outputBox').textContent =
+    `▶ Running ${lang} code...\n\n(Demo — connect Judge0 API key for live execution)\n\n` +
+    `Simulated output:\nSolution executed successfully\nTest case 1: ✓ Passed\nTest case 2: ✓ Passed\nTime: 42ms | Memory: 18KB`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INTERVIEW — voice + text
+// ═══════════════════════════════════════════════════════════════════════════
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'en-US'; utt.rate = 0.95;
+  const ind = document.getElementById('ttsIndicator');
+  utt.onstart = () => ind && (ind.className = 'tts-indicator speaking');
+  utt.onend = utt.onerror = () => ind && (ind.className = 'tts-indicator');
+  window.speechSynthesis.speak(utt);
+}
+
+let recognition = null, isRecording = false;
+function initRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const r = new SR(); r.lang='en-US'; r.continuous=false; r.interimResults=true;
+  const inp = document.getElementById('answerInput');
+  r.onresult = e => {
+    let f='', t='';
+    for (let i=e.resultIndex;i<e.results.length;i++)
+      (e.results[i].isFinal ? f : t) += e.results[i][0].transcript;
+    inp.value = (inp.value+' '+(f||t)).trim();
+  };
+  r.onerror = e => { document.getElementById('voiceStatus').textContent='Mic error: '+e.error; stopRec(); };
+  r.onend = () => stopRec();
+  return r;
+}
+function toggleMic() {
+  if (isRecording) { stopRec(); return; }
+  if (!recognition) recognition = initRecognition();
+  if (!recognition) { document.getElementById('voiceStatus').textContent='Use Chrome for voice.'; return; }
+  isRecording = true;
+  document.getElementById('micBtn').classList.add('recording');
+  document.getElementById('micBtn').textContent = '⏹ Stop';
+  document.getElementById('voiceStatus').textContent = '🔴 Listening…';
+  recognition.start();
+}
+function stopRec() {
+  isRecording = false;
+  if (recognition) { try{recognition.stop();}catch(e){} }
+  const b = document.getElementById('micBtn');
+  if(b){b.classList.remove('recording');b.textContent='🎤 Speak';}
+  const s = document.getElementById('voiceStatus');
+  if(s) s.textContent='Stopped — review then Send';
+}
+const QUESTIONS = ["Great! Can you walk me through a real example of Python?", "How would you handle edge cases in Python?", "What are the performance implications of Python at scale?", "Compare Python to any alternatives you know.", "What is the single most important thing about Python for a junior dev?"];
+let qIdx=0, ansCount=0;
+const iScores={tech:0,comm:0,conf:0,clar:0};
+function addMsg(t,r){const l=document.getElementById('chatLog');l.innerHTML+=`<div class="msg ${r}">${t}</div>`;l.scrollTop=l.scrollHeight;}
+function sendAnswer(){
+  const inp=document.getElementById('answerInput'), text=inp.value.trim();
+  if(!text) return;
+  addMsg(text,'user'); inp.value=''; ansCount++;
+  const w=text.trim().split(/\s+/).length;
+  iScores.tech=Math.min(100,iScores.tech+(w>20?12:6));
+  iScores.comm=Math.min(100,iScores.comm+(w>10?10:5));
+  iScores.conf=Math.min(100,iScores.conf+8+Math.floor(Math.random()*5));
+  iScores.clar=Math.min(100,iScores.clar+9+Math.floor(Math.random()*4));
+  if(ansCount>=2) renderIScores();
+  if(qIdx<QUESTIONS.length){const q=QUESTIONS[qIdx++];setTimeout(()=>{addMsg(q,'ai');speak(q);},700);}
+  else{const o='Great effort! Interview complete. Check your score.';setTimeout(()=>{addMsg(o,'ai');speak(o);},700);}
+}
+function renderIScores(){
+  [['tech','sb-tech','sv-tech'],['comm','sb-comm','sv-comm'],
+   ['conf','sb-conf','sv-conf'],['clar','sb-clar','sv-clar']].forEach(([k,b,v])=>{
+    const bar=document.getElementById(b),val=document.getElementById(v);
+    if(bar) bar.style.width=iScores[k]+'%';
+    if(val) val.textContent=iScores[k];
+  });
+  const t=document.getElementById('iScoreTip');
+  if(t) t.textContent='Scores update after each answer.';
+}
+function showIScore(){if(ansCount<2){alert('Answer at least 2 questions.');return;}renderIScores();}
+function resetInterview(){
+  window.speechSynthesis&&window.speechSynthesis.cancel();stopRec();
+  qIdx=0;ansCount=0;Object.keys(iScores).forEach(k=>iScores[k]=0);
+  document.getElementById('chatLog').innerHTML=`<div class="msg ai">👋 Welcome back! Explain what <strong>${TOPIC}</strong> is in your own words.</div>`;
+  document.getElementById('answerInput').value='';
+  ['sb-tech','sb-comm','sb-conf','sb-clar'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.width='0';});
+  ['sv-tech','sv-comm','sv-conf','sv-clar'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='—';});
+}
+document.getElementById('answerInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAnswer();}});
+window.addEventListener('load',()=>{setTimeout(()=>speak('Welcome! Can you explain what '+TOPIC+' is in your own words?'),800);});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VIDEOS — fetch from backend, embed in IFrame
+// ═══════════════════════════════════════════════════════════════════════════
+let videosLoaded = false;
+let currentLang  = 'tamil';
+let videoData    = {};  // cache per lang
+
+async function loadVideos(lang) {
+  currentLang = lang;
+  document.getElementById('vloadMsg') && (document.getElementById('videoList').innerHTML =
+    `<div class="vload-msg" id="vloadMsg">🔄 Fetching top ${lang === 'tamil' ? 'Tamil' : 'English'} videos…</div>`);
+
+  // Switch tab highlight
+  document.getElementById('vtab-tamil').className  = 'vtab' + (lang==='tamil'?' active':'');
+  document.getElementById('vtab-english').className = 'vtab' + (lang==='english'?' active':'');
+
+  if (videoData[lang]) { renderVideoList(videoData[lang], lang); return; }
+
+  try {
+    const res  = await fetch(`/demo/videos?topic=${encodeURIComponent(TOPIC)}&lang=${lang}`);
+    const data = await res.json();
+    videoData[lang] = data.videos || [];
+    renderVideoList(videoData[lang], lang);
+    videosLoaded = true;
+  } catch(e) {
+    document.getElementById('videoList').innerHTML =
+      `<div class="vload-msg">Could not load videos. Check connection.</div>`;
+  }
+}
+
+function renderVideoList(videos, lang) {
+  const list = document.getElementById('videoList');
+  if (!videos.length) {
+    list.innerHTML = `<div class="vload-msg">No videos found. Try a different topic.</div>`;
+    return;
+  }
+  list.innerHTML = videos.map((v, i) =>
+    `<div class="vcard${i===0?' active':''}" id="vcard-${i}" onclick="playVideo('${v.videoId}', ${i})">
+       <div class="vcard-thumb">▶</div>
+       <div>
+         <div class="vcard-title">${v.title}</div>
+         <div class="vcard-ch">${v.channel}</div>
+       </div>
+     </div>`
+  ).join('');
+  // Auto-play first
+  if (videos[0].videoId) playVideo(videos[0].videoId, 0);
+}
+
+function playVideo(videoId, idx) {
+  if (!videoId) return;
+  document.getElementById('ytPlayer').src =
+    `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
+  document.querySelectorAll('.vcard').forEach((c,i) =>
+    c.classList.toggle('active', i === idx));
+}
+
+function switchVideoLang(lang) {
+  loadVideos(lang);
+}
+</script>
+</body>
+</html>
