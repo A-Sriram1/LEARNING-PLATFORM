@@ -89,6 +89,10 @@ async def get_theory(topic: str):
         " (software)",
         " (computer science)",
         " (programming)",
+        " (data structure)",
+        " (algorithm)",
+        " (computing)",
+        " (framework)",
         "",
     ]
 
@@ -104,14 +108,82 @@ async def get_theory(topic: str):
         r = await client.get(url, headers={**hdrs, "Accept": "text/html,application/xhtml+xml"})
         if r.status_code != 200:
             return []
-        raw = re.findall(r"<p[^>]*>(.*?)</p>", r.text, re.DOTALL)
+
+        html = r.text
+
+        # ── Cut at the first non-CS section ───────────────────────────────
+        skip_sections = [
+            "History", "Etymology", "Reception", "Awards", "Legacy",
+            "Naming", "Language development", "Languages influenced",
+            "Controversy", "Cultural", "Biography", "Personal life",
+            "Early life", "See also", "References", "Notes",
+            "Further reading", "External links",
+        ]
+        earliest_cut = len(html)
+        for sec in skip_sections:
+            m = re.search(
+                rf'<h2[^>]*>\s*{re.escape(sec)}\s*</h2>',
+                html, re.IGNORECASE
+            )
+            if m and m.start() < earliest_cut:
+                earliest_cut = m.start()
+
+        html_trimmed = html[:earliest_cut]
+
+        raw = re.findall(r"<p[^>]*>(.*?)</p>", html_trimmed, re.DOTALL)
         paras = []
+
+        # Signals that a paragraph is about history/biography, not CS
+        history_signals = [
+            "was born", "in the late 1980s", "in the 1990s", "in the 2000s",
+            "created by", "invented by", "developed by", "designed by",
+            "named after", "named for", "released in 19", "released in 20",
+            "first appeared", "initial release", "version 1.", "version 2.",
+            "van Rossum", "Guido", "Bjarne", "James Gosling",
+        ]
+
         for p in raw:
             clean = re.sub(r"<[^>]+>", "", p)
             clean = re.sub(r"\[[\d\w\s,]+\]", "", clean)
             clean = re.sub(r"\s+", " ", clean).strip()
-            if len(clean) > 100:
-                paras.append(clean)
+            if len(clean) < 100:
+                continue
+            if any(sig.lower() in clean.lower() for sig in history_signals):
+                continue
+            paras.append(clean)
+
+        # ── Fallback: if History cut left too few paras, scrape CS sections ──
+        # Pull paragraphs from specifically technical sections only.
+        if len(paras) < 4:
+            cs_section_names = [
+                "Design philosophy", "Features", "Syntax", "Semantics",
+                "Libraries", "Standard library", "Implementations",
+                "Development environment", "Typing", "Memory management",
+                "Concurrency", "Object-oriented", "Functional", "Modules",
+                "Data structures", "Algorithms", "Performance",
+                "Applications", "Use cases", "Frameworks", "Tools",
+            ]
+            for sec_name in cs_section_names:
+                # Find the section in the full HTML
+                m_start = re.search(
+                    rf'<h[23][^>]*>\s*{re.escape(sec_name)}[^<]*</h[23]>',
+                    html, re.IGNORECASE
+                )
+                if not m_start:
+                    continue
+                # Find where the next h2 starts (end of this section)
+                m_end = re.search(r'<h2[^>]*>', html[m_start.end():], re.IGNORECASE)
+                end_pos = m_start.end() + (m_end.start() if m_end else len(html))
+                section_html = html[m_start.start():end_pos]
+                for p in re.findall(r"<p[^>]*>(.*?)</p>", section_html, re.DOTALL):
+                    clean = re.sub(r"<[^>]+>", "", p)
+                    clean = re.sub(r"\[[\d\w\s,]+\]", "", clean)
+                    clean = re.sub(r"\s+", " ", clean).strip()
+                    if len(clean) > 100 and clean not in paras:
+                        paras.append(clean)
+                if len(paras) >= 8:
+                    break
+
         return paras
 
     try:
@@ -140,17 +212,19 @@ async def get_theory(topic: str):
             })
 
         # Fill remaining sections from HTML paragraphs (skip first if it duplicates intro)
-        depth_paras = [p for p in wiki_paras if p not in intro][:12]
+        depth_paras = [p for p in wiki_paras if p not in intro][:14]
 
-        headings = [
-            "Key concepts",
+        # CS-specific section headings
+        cs_headings = [
+            "Core concepts",
             "How it works",
-            "Core features",
-            "Applications & use cases",
-            "Advantages",
-            "Important considerations",
+            "Key features",
+            "Syntax & structure",
+            "Standard library & tools",
+            "Performance & use cases",
+            "Best practices",
         ]
-        for i, heading in enumerate(headings):
+        for i, heading in enumerate(cs_headings):
             start = i * 2
             chunk = " ".join(depth_paras[start:start + 2])
             if len(chunk) > 80:
