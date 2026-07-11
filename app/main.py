@@ -45,7 +45,7 @@ async def demo_videos(topic: str, lang: str = "tamil"):
         "Accept-Language": "en-US,en;q=0.9",
     }
     try:
-        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True, verify=False) as client:
             resp = await client.get(url, headers=headers)
             html = resp.text
         ids      = re.findall(r'"videoId":"([a-zA-Z0-9_-]{11})"', html)
@@ -66,7 +66,108 @@ async def demo_videos(topic: str, lang: str = "tamil"):
         return JSONResponse({"videos": [], "error": str(e)})
 
 
-# ── Workspace endpoints ────────────────────────────────────────────────────
+# ── Theory content — Wikipedia REST summary + HTML scrape ─────────────────
+@app.get("/api/theory")
+async def get_theory(topic: str):
+    import urllib.parse
+
+    hdrs = {
+        # Wikipedia policy requires a descriptive User-Agent, not a browser UA.
+        # Generic browser strings get 403'd. See: https://meta.wikimedia.org/wiki/User-Agent_policy
+        "User-Agent": (
+            "SkillForgeAI/1.0 "
+            "(https://github.com/RSAKTHISABARISH/LEARNING-PLATFORM; "
+            "skillforge-ai-app) python-httpx/0.27"
+        ),
+        "Accept": "application/json",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+
+    # Smart search candidates: try programming/CS-specific title first
+    tech_suffixes = [
+        " (programming language)",
+        " (software)",
+        " (computer science)",
+        " (programming)",
+        "",
+    ]
+
+    async def fetch_wiki_summary(title: str, client) -> dict:
+        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + urllib.parse.quote(title)
+        r = await client.get(url, headers=hdrs)
+        if r.status_code == 200:
+            return r.json()
+        return {}
+
+    async def fetch_wiki_html_paras(title: str, client) -> list:
+        url = "https://en.wikipedia.org/wiki/" + urllib.parse.quote(title.replace(" ", "_"))
+        r = await client.get(url, headers={**hdrs, "Accept": "text/html,application/xhtml+xml"})
+        if r.status_code != 200:
+            return []
+        raw = re.findall(r"<p[^>]*>(.*?)</p>", r.text, re.DOTALL)
+        paras = []
+        for p in raw:
+            clean = re.sub(r"<[^>]+>", "", p)
+            clean = re.sub(r"\[[\d\w\s,]+\]", "", clean)
+            clean = re.sub(r"\s+", " ", clean).strip()
+            if len(clean) > 100:
+                paras.append(clean)
+        return paras
+
+    try:
+        async with httpx.AsyncClient(timeout=12, follow_redirects=True, verify=False) as client:
+            summary = {}
+            used_title = topic
+
+            # Try tech-specific titles first to avoid disambiguation
+            for suffix in tech_suffixes:
+                candidate = topic + suffix
+                summary = await fetch_wiki_summary(candidate, client)
+                if summary.get("type") == "standard" and len(summary.get("extract", "")) > 100:
+                    used_title = summary.get("title", candidate)
+                    break
+
+            # Fetch full HTML paragraphs for depth
+            wiki_paras = await fetch_wiki_html_paras(used_title, client)
+
+        # Build sections
+        sections = []
+        intro = summary.get("extract", "").strip()
+        if intro:
+            sections.append({
+                "heading": f"What is {used_title}?",
+                "body": intro,
+            })
+
+        # Fill remaining sections from HTML paragraphs (skip first if it duplicates intro)
+        depth_paras = [p for p in wiki_paras if p not in intro][:12]
+
+        headings = [
+            "Key concepts",
+            "How it works",
+            "Core features",
+            "Applications & use cases",
+            "Advantages",
+            "Important considerations",
+        ]
+        for i, heading in enumerate(headings):
+            start = i * 2
+            chunk = " ".join(depth_paras[start:start + 2])
+            if len(chunk) > 80:
+                sections.append({"heading": heading, "body": chunk})
+
+        if not sections:
+            return JSONResponse({"sections": [], "title": topic})
+
+        wiki_url = summary.get("content_urls", {}).get("desktop", {}).get("page", "")
+        return JSONResponse({
+            "title": used_title,
+            "sections": sections,
+            "source_url": wiki_url,
+        })
+
+    except Exception as e:
+        return JSONResponse({"sections": [], "error": str(e)})
 class ForgeRequest(BaseModel):
     topic: str
 
