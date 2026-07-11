@@ -574,7 +574,9 @@ async function loadTheory() {
     var res = await fetch('/api/theory?topic=' + encodeURIComponent(TOPIC));
     var data = await res.json();
     if (!data.sections || data.sections.length === 0) {
-      loading.textContent = 'Could not load theory. Try another topic.';
+      loading.innerHTML = data.error
+        ? '<span style="color:var(--ember)">⚠ ' + data.error + '</span>'
+        : 'Could not load theory content for this topic. Try a more specific term (e.g. "Python programming language").';
       return;
     }
     var html = '';

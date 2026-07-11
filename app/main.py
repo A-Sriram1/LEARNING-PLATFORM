@@ -83,6 +83,21 @@ async def get_theory(topic: str):
         "Accept-Language": "en-US,en;q=0.9",
     }
 
+    # CS-related categories/keywords that confirm an article is about computing
+    CS_CONFIRM_KEYWORDS = [
+        "programming language", "software", "computer science", "computing",
+        "algorithm", "data structure", "framework", "library", "runtime",
+        "compiler", "interpreter", "operating system", "database", "network",
+        "machine learning", "artificial intelligence", "web", "api",
+        "object-oriented", "functional programming", "syntax", "semantics",
+        "open-source", "open source", "source code", "developer", "codebase",
+    ]
+
+    def is_cs_article(summary: dict) -> bool:
+        """Return True only if the Wikipedia summary looks like a CS article."""
+        text = (summary.get("extract", "") + " " + summary.get("description", "")).lower()
+        return any(kw in text for kw in CS_CONFIRM_KEYWORDS)
+
     # Smart search candidates: try programming/CS-specific title first
     tech_suffixes = [
         " (programming language)",
@@ -195,9 +210,20 @@ async def get_theory(topic: str):
             for suffix in tech_suffixes:
                 candidate = topic + suffix
                 summary = await fetch_wiki_summary(candidate, client)
-                if summary.get("type") == "standard" and len(summary.get("extract", "")) > 100:
+                if (
+                    summary.get("type") == "standard"
+                    and len(summary.get("extract", "")) > 80
+                    and is_cs_article(summary)
+                ):
                     used_title = summary.get("title", candidate)
                     break
+            else:
+                # No CS article found — return empty so the frontend shows a helpful message
+                return JSONResponse({
+                    "sections": [],
+                    "title": topic,
+                    "error": f"No computer science article found for '{topic}'. Try a more specific term like 'Python programming language'."
+                })
 
             # Fetch full HTML paragraphs for depth
             wiki_paras = await fetch_wiki_html_paras(used_title, client)
